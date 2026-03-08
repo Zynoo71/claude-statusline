@@ -7,7 +7,7 @@ const os = require("os");
 const CLAUDE_DIR = path.join(os.homedir(), ".claude");
 const SETTINGS_FILE = path.join(CLAUDE_DIR, "settings.json");
 const STATUSLINE_DEST = path.join(CLAUDE_DIR, "statusline.sh");
-const STATUSLINE_SRC = path.resolve(__dirname, "..", "statusline.sh");
+const STATUSLINE_SRC = path.resolve(__dirname, "statusline.sh");
 
 const blue = "\x1b[38;2;0;153;255m";
 const green = "\x1b[38;2;0;175;80m";
