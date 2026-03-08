@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "A status line for Claude Code CLI showing model, context usage, rate limits, and more",
   "bin": {
-    "claude-line": "./bin/install.js"
+    "claude-statusline": "./bin/install.js"
   },
   "keywords": [
     "claude",
