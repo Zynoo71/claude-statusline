@@ -60,9 +60,9 @@ Each section uses a distinct color palette for easy visual separation:
 
 | Section | < 50% | 50-70% | 70-90% | > 90% |
 |---------|-------|--------|--------|-------|
-| **Context window** (amber) | Light grey | Amber | Peach | Orange-red |
-| **Current rate** (warm) | Green | Orange | Yellow | Red |
-| **Weekly rate** (cool) | Teal | Sapphire | Mauve | Pink |
+| **Context window** (amber) | ![](https://img.shields.io/badge/-CDD6F4?style=flat-square&color=CDD6F4) Light grey | ![](https://img.shields.io/badge/-F9E2AF?style=flat-square&color=F9E2AF) Amber | ![](https://img.shields.io/badge/-FAB387?style=flat-square&color=FAB387) Peach | ![](https://img.shields.io/badge/-EF6C57?style=flat-square&color=EF6C57) Orange-red |
+| **Current rate** (warm) | ![](https://img.shields.io/badge/-00AF50?style=flat-square&color=00AF50) Green | ![](https://img.shields.io/badge/-FFB055?style=flat-square&color=FFB055) Orange | ![](https://img.shields.io/badge/-E6C800?style=flat-square&color=E6C800) Yellow | ![](https://img.shields.io/badge/-FF5555?style=flat-square&color=FF5555) Red |
+| **Weekly rate** (cool) | ![](https://img.shields.io/badge/-94E2D5?style=flat-square&color=94E2D5) Teal | ![](https://img.shields.io/badge/-74C7EC?style=flat-square&color=74C7EC) Sapphire | ![](https://img.shields.io/badge/-CBA6F7?style=flat-square&color=CBA6F7) Mauve | ![](https://img.shields.io/badge/-F5C2E7?style=flat-square&color=F5C2E7) Pink |
 
 Color palettes inspired by [Catppuccin Mocha](https://github.com/catppuccin/catppuccin).
 
