@@ -7,13 +7,13 @@ Configure your Claude Code statusline to show limits, directory and git info. Fo
 ## Install
 
 ```bash
-npx @zynoo/claude-statusline
+bunx @zynoo/claude-statusline
 ```
 
 With a custom bar style:
 
 ```bash
-npx @zynoo/claude-statusline --bar-style diamond
+bunx @zynoo/claude-statusline --bar-style diamond
 ```
 
 It backups your old status line if any and copies the status line script to `~/.claude/statusline.sh` and configures your Claude Code settings.
@@ -45,7 +45,7 @@ Use the `--bar-style` flag during install to set the progress bar style:
 To change the style later, just re-run the install command:
 
 ```bash
-npx @zynoo/claude-statusline --bar-style block
+bunx @zynoo/claude-statusline --bar-style block
 ```
 
 You can also set it via environment variable in your `.zshrc` or `.bashrc`:
@@ -69,7 +69,7 @@ Color palettes inspired by [Catppuccin Mocha](https://github.com/catppuccin/catp
 ## Uninstall
 
 ```bash
-npx @zynoo/claude-statusline --uninstall
+bunx @zynoo/claude-statusline --uninstall
 ```
 
 If you had a previous statusline, it restores it from the backup. Otherwise it removes the script and cleans up your settings.
