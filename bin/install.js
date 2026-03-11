@@ -97,7 +97,7 @@ function uninstall() {
   console.log();
 }
 
-const VALID_BAR_STYLES = ["diamond", "block", "dot"];
+const VALID_BAR_STYLES = ["diamond", "block", "dot", "arrow", "square", "shade"];
 
 function getArg(name) {
   const idx = process.argv.indexOf(name);
@@ -184,7 +184,7 @@ function run() {
   console.log();
   log(`${green}Done!${reset} Restart Claude Code to see your new status line.`);
   if (!barStyle) {
-    log(`${dim}Tip: use --bar-style <diamond|block|dot> to change the progress bar style${reset}`);
+    log(`${dim}Tip: use --bar-style <${VALID_BAR_STYLES.join("|")}> to change the progress bar style${reset}`);
   }
   console.log();
 }
