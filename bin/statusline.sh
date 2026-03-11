@@ -259,19 +259,34 @@ if [ -f "$cache_file" ]; then
 fi
 
 if $needs_refresh; then
-    token=$(get_oauth_token)
-    if [ -n "$token" ] && [ "$token" != "null" ]; then
-        response=$(curl -s --max-time 5 \
-            -H "Accept: application/json" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $token" \
-            -H "anthropic-beta: oauth-2025-04-20" \
-            -H "User-Agent: claude-code/2.1.34" \
-            "https://api.anthropic.com/api/oauth/usage" 2>/dev/null)
-        if [ -n "$response" ] && echo "$response" | jq -e '.five_hour' >/dev/null 2>&1; then
-            usage_data="$response"
-            echo "$response" > "$cache_file"
+    lock_file="/tmp/claude/statusline-usage.lock"
+    # Remove stale lock: PID no longer alive or lock older than 30s
+    if [ -f "$lock_file" ]; then
+        lock_pid=$(cat "$lock_file" 2>/dev/null)
+        if [ -n "$lock_pid" ] && ! kill -0 "$lock_pid" 2>/dev/null; then
+            rm -f "$lock_file"
+        elif [ -n "$(find "$lock_file" -mmin +0.5 2>/dev/null)" ]; then
+            rm -f "$lock_file"
         fi
+    fi
+    if ( set -o noclobber; echo $$ > "$lock_file" ) 2>/dev/null; then
+        trap 'rm -f "$lock_file"' EXIT
+        token=$(get_oauth_token)
+        if [ -n "$token" ] && [ "$token" != "null" ]; then
+            response=$(curl -s --max-time 5 \
+                -H "Accept: application/json" \
+                -H "Content-Type: application/json" \
+                -H "Authorization: Bearer $token" \
+                -H "anthropic-beta: oauth-2025-04-20" \
+                -H "User-Agent: claude-code/2.1.34" \
+                "https://api.anthropic.com/api/oauth/usage" 2>/dev/null)
+            if [ -n "$response" ] && echo "$response" | jq -e '.five_hour' >/dev/null 2>&1; then
+                usage_data="$response"
+                echo "$response" > "$cache_file"
+            fi
+        fi
+        rm -f "$lock_file"
+        trap - EXIT
     fi
     if [ -z "$usage_data" ] && [ -f "$cache_file" ]; then
         usage_data=$(cat "$cache_file" 2>/dev/null)
