@@ -5,7 +5,8 @@ const { spawn } = require("child_process");
 
 const STATUSLINE_SRC = path.resolve(__dirname, "statusline.sh");
 
-const child = spawn("bash", [STATUSLINE_SRC], {
+const args = process.argv.slice(2);
+const child = spawn("bash", [STATUSLINE_SRC, ...args], {
   stdio: ["pipe", "inherit", "inherit"],
   env: process.env,
 });

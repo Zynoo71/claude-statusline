@@ -1,6 +1,15 @@
 #!/bin/bash
 set -f
 
+# ── Parse CLI arguments ──────────────────────────────────
+CACHE_TTL=120
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --cache-ttl) CACHE_TTL="$2"; shift 2 ;;
+        *) shift ;;
+    esac
+done
+
 input=$(cat)
 
 if [ -z "$input" ]; then
@@ -280,7 +289,7 @@ get_oauth_token() {
 
 # ── Fetch usage data (cached) ──────────────────────────
 cache_file="/tmp/claude/statusline-usage-cache.json"
-cache_max_age=120
+cache_max_age=$CACHE_TTL
 mkdir -p /tmp/claude
 
 needs_refresh=true
