@@ -3,10 +3,10 @@
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const { execSync, spawn } = require("child_process");
 
 const CLAUDE_DIR = path.join(os.homedir(), ".claude");
 const SETTINGS_FILE = path.join(CLAUDE_DIR, "settings.json");
-const STATUSLINE_DEST = path.join(CLAUDE_DIR, "statusline.sh");
 const STATUSLINE_SRC = path.resolve(__dirname, "statusline.sh");
 
 const blue = "\x1b[38;2;0;153;255m";
@@ -32,8 +32,31 @@ function fail(msg) {
   console.error(`  ${red}✗${reset} ${msg}`);
 }
 
+// ── Statusline runner mode ──────────────────────────────
+// When stdin is piped (Claude Code feeds JSON), run the bash script directly
+
+function runStatusline() {
+  const barStyle = process.env.CLAUDE_STATUSLINE_BAR_STYLE || "";
+  const env = { ...process.env };
+  if (barStyle) {
+    env.CLAUDE_STATUSLINE_BAR_STYLE = barStyle;
+  }
+
+  const child = spawn("bash", [STATUSLINE_SRC], {
+    stdio: ["pipe", "inherit", "inherit"],
+    env,
+  });
+
+  process.stdin.pipe(child.stdin);
+
+  child.on("close", (code) => {
+    process.exit(code || 0);
+  });
+}
+
+// ── Installer mode ──────────────────────────────────────
+
 function checkDeps() {
-  const { execSync } = require("child_process");
   const missing = [];
 
   try {
@@ -62,19 +85,6 @@ function uninstall() {
   console.log(`  ${blue}Claude Line Uninstaller${reset}`);
   console.log(`  ${dim}───────────────────────${reset}`);
   console.log();
-
-  const backup = STATUSLINE_DEST + ".bak";
-
-  if (fs.existsSync(backup)) {
-    fs.copyFileSync(backup, STATUSLINE_DEST);
-    fs.unlinkSync(backup);
-    success(`Restored previous statusline from ${dim}statusline.sh.bak${reset}`);
-  } else if (fs.existsSync(STATUSLINE_DEST)) {
-    fs.unlinkSync(STATUSLINE_DEST);
-    success(`Removed ${dim}statusline.sh${reset}`);
-  } else {
-    warn("No statusline found — nothing to remove");
-  }
 
   if (fs.existsSync(SETTINGS_FILE)) {
     try {
@@ -105,7 +115,7 @@ function getArg(name) {
   return process.argv[idx + 1];
 }
 
-function run() {
+function install() {
   if (process.argv.includes("--uninstall")) {
     uninstall();
     return;
@@ -139,16 +149,6 @@ function run() {
     success(`Created ${CLAUDE_DIR}`);
   }
 
-  const backup = STATUSLINE_DEST + ".bak";
-  if (fs.existsSync(STATUSLINE_DEST)) {
-    fs.copyFileSync(STATUSLINE_DEST, backup);
-    warn(`Backed up existing statusline to ${dim}statusline.sh.bak${reset}`);
-  }
-
-  fs.copyFileSync(STATUSLINE_SRC, STATUSLINE_DEST);
-  fs.chmodSync(STATUSLINE_DEST, 0o755);
-  success(`Installed statusline to ${dim}${STATUSLINE_DEST}${reset}`);
-
   let settings = {};
   if (fs.existsSync(SETTINGS_FILE)) {
     try {
@@ -159,10 +159,10 @@ function run() {
     }
   }
 
-  const stylePrefix = barStyle ? `CLAUDE_STATUSLINE_BAR_STYLE=${barStyle} ` : "";
+  const styleEnv = barStyle ? `CLAUDE_STATUSLINE_BAR_STYLE=${barStyle} ` : "";
   const statusLineConfig = {
     type: "command",
-    command: `${stylePrefix}bash "$HOME/.claude/statusline.sh"`,
+    command: `${styleEnv}bunx @zynoo/claude-statusline`,
   };
 
   if (
@@ -189,4 +189,12 @@ function run() {
   console.log();
 }
 
-run();
+// ── Entry point ─────────────────────────────────────────
+
+if (!process.stdin.isTTY) {
+  // Piped input from Claude Code → run statusline
+  runStatusline();
+} else {
+  // Interactive terminal → run installer
+  install();
+}

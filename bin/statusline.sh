@@ -156,7 +156,7 @@ format_reset_time() {
 }
 
 # ── Extract JSON data ───────────────────────────────────
-model_name=$(echo "$input" | jq -r '.model.display_name // "Claude"')
+model_name=$(echo "$input" | jq -r 'if (.model | type) == "object" then .model.display_name // "Claude" else .model // "Claude" end')
 
 size=$(echo "$input" | jq -r '.context_window.context_window_size // 200000')
 [ "$size" -eq 0 ] 2>/dev/null && size=200000
