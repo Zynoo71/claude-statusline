@@ -3,9 +3,11 @@ set -f
 
 # ── Parse CLI arguments ──────────────────────────────────
 CACHE_TTL=120
+BAR_STYLE=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --cache-ttl) CACHE_TTL="$2"; shift 2 ;;
+        --bar-style) BAR_STYLE="$2"; shift 2 ;;
         *) shift ;;
     esac
 done
@@ -81,7 +83,7 @@ build_bar() {
     local pct=$1
     local width=$2
     local scheme="${3:-warm}"
-    local style="${CLAUDE_STATUSLINE_BAR_STYLE:-diamond}"
+    local style="${BAR_STYLE:-${CLAUDE_STATUSLINE_BAR_STYLE:-diamond}}"
     [ "$pct" -lt 0 ] 2>/dev/null && pct=0
     [ "$pct" -gt 100 ] 2>/dev/null && pct=100
 
@@ -98,6 +100,7 @@ build_bar() {
         arrow)   filled_char="▸"; empty_char="▹" ;;
         square)  filled_char="■"; empty_char="□" ;;
         shade)   filled_char="▓"; empty_char="░" ;;
+        solid)   filled_char="█"; empty_char="█" ;;
         *)       filled_char="▰"; empty_char="▱" ;;
     esac
 
@@ -105,7 +108,12 @@ build_bar() {
     for ((i=0; i<filled; i++)); do filled_str+="$filled_char"; done
     for ((i=0; i<empty; i++)); do empty_str+="$empty_char"; done
 
-    printf "${bar_color}${filled_str}${dim}${empty_str}${reset}"
+    local empty_color="${dim}"
+    if [ "$style" = "solid" ]; then
+        empty_color='\033[38;2;55;60;80m'
+    fi
+
+    printf "${bar_color}${filled_str}${empty_color}${empty_str}${reset}"
 }
 
 iso_to_epoch() {

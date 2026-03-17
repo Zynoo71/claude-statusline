@@ -41,3 +41,7 @@ Two files do all the work:
 
 - **Line 1**: Model name, context usage bar, directory + git branch, session duration, effort level
 - **Lines 2-4**: Rate limit bars (current 5-hour, weekly 7-day, optional extra/pay-as-you-go) with reset times
+
+### Environment Variables
+
+- `CLAUDE_STATUSLINE_BAR_STYLE` — Bar character style: `diamond` (default), `block`, `dot`, `arrow`, `square`, `shade`, `solid`
