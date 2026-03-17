@@ -1,22 +1,21 @@
 # claude-statusline
 
-Configure your Claude Code statusline to show limits, directory and git info. Fork of [@kamranahmedse/claude-statusline](https://github.com/kamranahmedse/claude-statusline) with customizable progress bar styles.
+A custom status line for Claude Code CLI showing model, context usage, rate limits, effort level, and more. Fork of [@kamranahmedse/claude-statusline](https://github.com/kamranahmedse/claude-statusline) with Catppuccin Mocha colors, compact mode, and session-aware effort detection.
 
 ![preview](./.github/preview.png)
 
 ## Install
 
-```bash
-bunx @zynoo/claude-statusline
+Add to your Claude Code `settings.json`:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "bunx @zynoo/claude-statusline --bar-style shade --usage-style compact"
+  }
+}
 ```
-
-With a custom bar style:
-
-```bash
-bunx @zynoo/claude-statusline --bar-style diamond
-```
-
-It backups your old status line if any and copies the status line script to `~/.claude/statusline.sh` and configures your Claude Code settings.
 
 ## Requirements
 
@@ -30,49 +29,64 @@ On macOS:
 brew install jq
 ```
 
-## Configuration
+## CLI Arguments
 
-### Bar Style
+| Argument | Values | Default | Description |
+|----------|--------|---------|-------------|
+| `--cache-ttl` | seconds | `120` | API cache TTL |
+| `--bar-style` | `diamond`, `block`, `dot`, `arrow`, `square`, `shade` | `diamond` | Progress bar character style |
+| `--usage-style` | `default`, `compact` | `default` | Multi-line or single-line usage |
+| `--time-style` | `remaining`, `absolute` | `remaining` | `1h·4m left` vs `12:00am` |
 
-Use the `--bar-style` flag during install to set the progress bar style:
+### Bar Styles
 
 | Value | Preview |
 |-------|---------|
 | `diamond` (default) | `▰▰▰▱▱▱▱▱▱▱` |
 | `block` | `████░░░░░░` |
+| `shade` | `▓▓▓░░░░░░░` |
 | `dot` | `●●●○○○○○○○` |
+| `arrow` | `▸▸▸▹▹▹▹▹▹▹` |
+| `square` | `■■■□□□□□□□` |
 
-To change the style later, just re-run the install command:
+### Usage Styles
 
-```bash
-bunx @zynoo/claude-statusline --bar-style block
+**default** — multi-line with rate limit details:
+```
+Opus 4.6 (1M context) │ ✍️ 12% │ my-project (main) │ ⏱ 1h30m │ ◉ max
+current ▓▓▓▓░░░░░░  44% (1h·4m left)
+weekly  ▓▓░░░░░░░░  21% (2d·14h left)
 ```
 
-You can also set it via environment variable in your `.zshrc` or `.bashrc`:
-
-```bash
-export CLAUDE_STATUSLINE_BAR_STYLE=diamond
+**compact** — single-line usage:
+```
+Opus 4.6 (1M context) │ ✍️ 12% │ my-project (main) │ ⏱ 1h30m │ ◉ max
+Usage ▓▓▓▓░░░░░░░░ 44% (1h·4m left) │ ▓▓░░░░░░░░░░ 21% (2d·14h left)
 ```
 
-### Color Schemes
+## Effort Level Detection
 
-Each section uses a distinct color palette for easy visual separation:
+Effort level is detected from the session transcript (supports `max`, `high`, `medium`, `low`), with fallback to `~/.claude/settings.json`. Each level has a distinct icon and color:
 
-| Section | < 50% | 50-70% | 70-90% | > 90% |
-|---------|-------|--------|--------|-------|
-| **Context window** (amber) | ![](https://img.shields.io/badge/-CDD6F4?style=flat-square&color=CDD6F4) Light grey | ![](https://img.shields.io/badge/-F9E2AF?style=flat-square&color=F9E2AF) Amber | ![](https://img.shields.io/badge/-FAB387?style=flat-square&color=FAB387) Peach | ![](https://img.shields.io/badge/-EF6C57?style=flat-square&color=EF6C57) Orange-red |
-| **Current rate** (warm) | ![](https://img.shields.io/badge/-00AF50?style=flat-square&color=00AF50) Green | ![](https://img.shields.io/badge/-FFB055?style=flat-square&color=FFB055) Orange | ![](https://img.shields.io/badge/-E6C800?style=flat-square&color=E6C800) Yellow | ![](https://img.shields.io/badge/-FF5555?style=flat-square&color=FF5555) Red |
-| **Weekly rate** (cool) | ![](https://img.shields.io/badge/-94E2D5?style=flat-square&color=94E2D5) Teal | ![](https://img.shields.io/badge/-74C7EC?style=flat-square&color=74C7EC) Sapphire | ![](https://img.shields.io/badge/-CBA6F7?style=flat-square&color=CBA6F7) Mauve | ![](https://img.shields.io/badge/-F5C2E7?style=flat-square&color=F5C2E7) Pink |
+| Level | Icon | Color |
+|-------|------|-------|
+| max | ◉ | Yellow |
+| high | ● | Mauve |
+| medium | ◑ | Sapphire |
+| low | ◔ | Dim |
 
-Color palettes inspired by [Catppuccin Mocha](https://github.com/catppuccin/catppuccin).
+## Color Scheme
 
-## Uninstall
+All colors use the [Catppuccin Mocha](https://github.com/catppuccin/catppuccin) palette:
 
-```bash
-bunx @zynoo/claude-statusline --uninstall
-```
-
-If you had a previous statusline, it restores it from the backup. Otherwise it removes the script and cleans up your settings.
+| Element | Color |
+|---------|-------|
+| Model name | Peach `#fab387` |
+| Directory | Sky `#89dceb` |
+| Git branch | Green `#a6e3a1` |
+| 5h usage bar | Green `#a6e3a1` |
+| 7d usage bar | Blue `#89b4fa` |
+| Empty bar | Surface 0 `#313244` |
 
 ## Credits
 
