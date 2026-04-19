@@ -20,7 +20,6 @@ Add to your Claude Code `settings.json`:
 ## Requirements
 
 - [jq](https://jqlang.github.io/jq/) — for parsing JSON
-- curl — for fetching rate limit data
 - git — for branch info
 
 On macOS:
@@ -33,7 +32,6 @@ brew install jq
 
 | Argument | Values | Default | Description |
 |----------|--------|---------|-------------|
-| `--cache-ttl` | seconds | `120` | API cache TTL |
 | `--bar-style` | `diamond`, `block`, `dot`, `arrow`, `square`, `shade` | `diamond` | Progress bar character style |
 | `--usage-style` | `default`, `compact` | `default` | Multi-line or single-line usage |
 | `--time-style` | `remaining`, `absolute` | `remaining` | `1h·4m left` vs `12:00am` |

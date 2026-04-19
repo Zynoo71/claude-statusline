@@ -13,12 +13,12 @@ claude-statusline is an npm package (`@zynoo/claude-statusline`), forked from `@
 bunx @zynoo/claude-statusline
 
 # With all options
-bunx @zynoo/claude-statusline --cache-ttl 120 --bar-style shade --usage-style compact
+bunx @zynoo/claude-statusline --bar-style shade --usage-style compact
 ```
 
 There are no automated tests or linting. Testing is manual — install the statusline and verify it renders correctly in Claude Code.
 
-**Requirements**: jq, curl, git must be installed on the system.
+**Requirements**: jq, git must be installed on the system.
 
 ## Architecture
 
@@ -26,17 +26,15 @@ Two files do all the work:
 
 - **`bin/install.js`** — Node.js CLI entry point. Passes CLI arguments through to the shell script.
 
-- **`bin/statusline.sh`** — Bash script that Claude Code invokes. Reads JSON context from stdin (model, tokens, session info), fetches rate limits from the Anthropic API (cached with configurable TTL in `/tmp/claude/`), and outputs a colored status display.
+- **`bin/statusline.sh`** — Bash script that Claude Code invokes. Reads JSON context from stdin (model, tokens, session info, rate limits) and outputs a colored status display. No network calls — all data comes from stdin.
 
 ### Data Flow
 
-1. Claude Code pipes JSON context to `statusline.sh` via stdin
-2. Script extracts model name, context usage, cwd, session start time
+1. Claude Code pipes JSON context to `statusline.sh` via stdin (includes `rate_limits.{five_hour,seven_day}.{used_percentage,resets_at}`)
+2. Script extracts model name, context usage, cwd, session start time, rate limits
 3. Git branch/dirty state detected if in a repo
 4. Effort level detected from session transcript JSONL (supports max/xhigh/high/medium/low), fallback to settings.json
-5. OAuth token retrieved (env var → macOS Keychain → credentials file → Linux secret-tool)
-6. Rate limit data fetched from API with file-based caching (default 120s, configurable via `--cache-ttl`)
-7. Formatted output with Catppuccin Mocha ANSI colors rendered to stdout
+5. Formatted output with Catppuccin Mocha ANSI colors rendered to stdout
 
 ### Status Line Output
 
@@ -45,10 +43,10 @@ Two files do all the work:
 
 ### CLI Arguments
 
-- `--cache-ttl <seconds>` — API cache TTL (default 120)
 - `--bar-style <style>` — Bar character style: `diamond` (default), `block`, `dot`, `arrow`, `square`, `shade`
 - `--usage-style <style>` — Usage layout: `default` (multi-line) or `compact` (single-line)
 - `--time-style <style>` — Time format: `remaining` (default, e.g. `1h·4m left`) or `absolute` (e.g. `12:00am`)
+- `--cache-ttl <seconds>` — Accepted but ignored (legacy, pre-1.7.0). Rate limits now come from stdin, no caching needed.
 
 ### Environment Variables
 

@@ -2,16 +2,15 @@
 set -f
 
 # ── Parse CLI arguments ──────────────────────────────────
-CACHE_TTL=120
 BAR_STYLE=""
 USAGE_STYLE=""
 TIME_STYLE=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --cache-ttl) CACHE_TTL="$2"; shift 2 ;;
         --bar-style) BAR_STYLE="$2"; shift 2 ;;
         --usage-style) USAGE_STYLE="$2"; shift 2 ;;
         --time-style) TIME_STYLE="$2"; shift 2 ;;
+        --cache-ttl) shift 2 ;;
         *) shift ;;
     esac
 done
@@ -145,13 +144,9 @@ iso_to_epoch() {
 }
 
 format_reset_time() {
-    local iso_str="$1"
+    local epoch="$1"
     local style="$2"
-    [ -z "$iso_str" ] || [ "$iso_str" = "null" ] && return
-
-    local epoch
-    epoch=$(iso_to_epoch "$iso_str")
-    [ -z "$epoch" ] && return
+    [ -z "$epoch" ] || [ "$epoch" = "null" ] && return
 
     local result=""
     case "$style" in
@@ -172,13 +167,8 @@ format_reset_time() {
 }
 
 format_remaining() {
-    local iso_str="$1"
-    local window="$2"
-    [ -z "$iso_str" ] || [ "$iso_str" = "null" ] && return
-
-    local epoch
-    epoch=$(iso_to_epoch "$iso_str")
-    [ -z "$epoch" ] && return
+    local epoch="$1"
+    [ -z "$epoch" ] || [ "$epoch" = "null" ] && return
 
     local now_ts
     now_ts=$(date +%s)
@@ -292,180 +282,55 @@ case "$effort" in
     *)      line1+="${dim}○ ${effort}${reset}" ;;
 esac
 
-# ── OAuth token resolution ──────────────────────────────
-get_oauth_token() {
-    local token=""
-
-    if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
-        echo "$CLAUDE_CODE_OAUTH_TOKEN"
-        return 0
-    fi
-
-    if command -v security >/dev/null 2>&1; then
-        local blob
-        blob=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null)
-        if [ -n "$blob" ]; then
-            token=$(echo "$blob" | jq -r '.claudeAiOauth.accessToken // empty' 2>/dev/null)
-            if [ -n "$token" ] && [ "$token" != "null" ]; then
-                echo "$token"
-                return 0
-            fi
-        fi
-    fi
-
-    local creds_file="${HOME}/.claude/.credentials.json"
-    if [ -f "$creds_file" ]; then
-        token=$(jq -r '.claudeAiOauth.accessToken // empty' "$creds_file" 2>/dev/null)
-        if [ -n "$token" ] && [ "$token" != "null" ]; then
-            echo "$token"
-            return 0
-        fi
-    fi
-
-    if command -v secret-tool >/dev/null 2>&1; then
-        local blob
-        blob=$(timeout 2 secret-tool lookup service "Claude Code-credentials" 2>/dev/null)
-        if [ -n "$blob" ]; then
-            token=$(echo "$blob" | jq -r '.claudeAiOauth.accessToken // empty' 2>/dev/null)
-            if [ -n "$token" ] && [ "$token" != "null" ]; then
-                echo "$token"
-                return 0
-            fi
-        fi
-    fi
-
-    echo ""
-}
-
-# ── Fetch usage data (cached) ──────────────────────────
-cache_file="/tmp/claude/statusline-usage-cache.json"
-cache_max_age=$CACHE_TTL
-mkdir -p /tmp/claude
-
-needs_refresh=true
-usage_data=""
-
-if [ -f "$cache_file" ]; then
-    cache_mtime=$(stat -c %Y "$cache_file" 2>/dev/null || stat -f %m "$cache_file" 2>/dev/null)
-    now=$(date +%s)
-    cache_age=$(( now - cache_mtime ))
-    if [ "$cache_age" -lt "$cache_max_age" ]; then
-        needs_refresh=false
-        usage_data=$(cat "$cache_file" 2>/dev/null)
-    fi
-fi
-
-if $needs_refresh; then
-    lock_file="/tmp/claude/statusline-usage.lock"
-    # Remove stale lock: PID no longer alive or lock older than 30s
-    if [ -f "$lock_file" ]; then
-        lock_pid=$(cat "$lock_file" 2>/dev/null)
-        if [ -n "$lock_pid" ] && ! kill -0 "$lock_pid" 2>/dev/null; then
-            rm -f "$lock_file"
-        elif [ -n "$(find "$lock_file" -mmin +0.5 2>/dev/null)" ]; then
-            rm -f "$lock_file"
-        fi
-    fi
-    if ( set -o noclobber; echo $$ > "$lock_file" ) 2>/dev/null; then
-        trap 'rm -f "$lock_file"' EXIT
-        token=$(get_oauth_token)
-        if [ -n "$token" ] && [ "$token" != "null" ]; then
-            response=$(curl -s --max-time 5 \
-                -H "Accept: application/json" \
-                -H "Content-Type: application/json" \
-                -H "Authorization: Bearer $token" \
-                -H "anthropic-beta: oauth-2025-04-20" \
-                -H "User-Agent: claude-code/2.1.34" \
-                "https://api.anthropic.com/api/oauth/usage" 2>/dev/null)
-            if [ -n "$response" ] && echo "$response" | jq -e '.five_hour' >/dev/null 2>&1; then
-                usage_data="$response"
-                echo "$response" > "$cache_file"
-            fi
-        fi
-        rm -f "$lock_file"
-        trap - EXIT
-    fi
-    if [ -z "$usage_data" ] && [ -f "$cache_file" ]; then
-        usage_data=$(cat "$cache_file" 2>/dev/null)
-    fi
-fi
-
-# ── Rate limit lines ────────────────────────────────────
+# ── Rate limit lines (from stdin, no API call) ──────────
 usage_style="${USAGE_STYLE:-${CLAUDE_STATUSLINE_USAGE_STYLE:-default}}"
 time_style="${TIME_STYLE:-${CLAUDE_STATUSLINE_TIME_STYLE:-remaining}}"
 rate_lines=""
 
-if [ -n "$usage_data" ] && echo "$usage_data" | jq -e . >/dev/null 2>&1; then
+five_hour_pct=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
+five_hour_reset=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
+seven_day_pct=$(echo "$input" | jq -r '.rate_limits.seven_day.used_percentage // empty')
+seven_day_reset=$(echo "$input" | jq -r '.rate_limits.seven_day.resets_at // empty')
 
-    five_hour_pct=$(echo "$usage_data" | jq -r '.five_hour.utilization // 0' | awk '{printf "%.0f", $1}')
-    five_hour_reset_iso=$(echo "$usage_data" | jq -r '.five_hour.resets_at // empty')
+if [ -n "$five_hour_pct" ] && [ -n "$seven_day_pct" ]; then
     five_hour_pct_color=$(color_for_pct "$five_hour_pct")
-
-    seven_day_pct=$(echo "$usage_data" | jq -r '.seven_day.utilization // 0' | awk '{printf "%.0f", $1}')
-    seven_day_reset_iso=$(echo "$usage_data" | jq -r '.seven_day.resets_at // empty')
     seven_day_pct_color=$(color_for_pct "$seven_day_pct" "cool")
-
-    extra_enabled=$(echo "$usage_data" | jq -r '.extra_usage.is_enabled // false')
 
     if [ "$usage_style" = "compact" ]; then
         bar_width=12
 
         five_hour_bar=$(build_bar "$five_hour_pct" "$bar_width")
-        five_hour_remaining=$(format_remaining "$five_hour_reset_iso" "5h")
-
+        five_hour_remaining=$(format_remaining "$five_hour_reset")
         rate_lines="${white}Usage${reset} ${five_hour_bar} ${five_hour_pct_color}${five_hour_pct}%${reset}"
         [ -n "$five_hour_remaining" ] && rate_lines+=" ${dim}(${five_hour_remaining})${reset}"
 
         seven_day_bar=$(build_bar "$seven_day_pct" "$bar_width" "cool")
-        seven_day_remaining=$(format_remaining "$seven_day_reset_iso" "7d")
-
+        seven_day_remaining=$(format_remaining "$seven_day_reset")
         rate_lines+="${sep}${seven_day_bar} ${seven_day_pct_color}${seven_day_pct}%${reset}"
         [ -n "$seven_day_remaining" ] && rate_lines+=" ${dim}(${seven_day_remaining})${reset}"
-
-        if [ "$extra_enabled" = "true" ]; then
-            extra_pct=$(echo "$usage_data" | jq -r '.extra_usage.utilization // 0' | awk '{printf "%.0f", $1}')
-            extra_used=$(echo "$usage_data" | jq -r '.extra_usage.used_credits // 0' | awk '{printf "%.2f", $1/100}')
-            extra_limit=$(echo "$usage_data" | jq -r '.extra_usage.monthly_limit // 0' | awk '{printf "%.2f", $1/100}')
-            extra_bar=$(build_bar "$extra_pct" "$bar_width")
-            extra_pct_color=$(color_for_pct "$extra_pct")
-            rate_lines+="${sep}${extra_bar} ${extra_pct_color}\$${extra_used}${dim}/${reset}${white}\$${extra_limit}${reset}"
-        fi
     else
         bar_width=10
 
         five_hour_bar=$(build_bar "$five_hour_pct" "$bar_width")
         five_hour_pct_fmt=$(printf "%3d" "$five_hour_pct")
-
         rate_lines+="${white}current${reset} ${five_hour_bar} ${five_hour_pct_color}${five_hour_pct_fmt}%${reset}"
         if [ "$time_style" = "absolute" ]; then
-            five_hour_reset=$(format_reset_time "$five_hour_reset_iso" "time")
-            rate_lines+=" ${dim}⟳${reset} ${white}${five_hour_reset}${reset}"
+            five_hour_reset_str=$(format_reset_time "$five_hour_reset" "time")
+            rate_lines+=" ${dim}⟳${reset} ${white}${five_hour_reset_str}${reset}"
         else
-            five_hour_remaining=$(format_remaining "$five_hour_reset_iso" "5h")
+            five_hour_remaining=$(format_remaining "$five_hour_reset")
             [ -n "$five_hour_remaining" ] && rate_lines+=" ${dim}(${five_hour_remaining})${reset}"
         fi
 
         seven_day_bar=$(build_bar "$seven_day_pct" "$bar_width" "cool")
         seven_day_pct_fmt=$(printf "%3d" "$seven_day_pct")
-
         rate_lines+="\n${white}weekly${reset}  ${seven_day_bar} ${seven_day_pct_color}${seven_day_pct_fmt}%${reset}"
         if [ "$time_style" = "absolute" ]; then
-            seven_day_reset=$(format_reset_time "$seven_day_reset_iso" "datetime")
-            rate_lines+=" ${dim}⟳${reset} ${white}${seven_day_reset}${reset}"
+            seven_day_reset_str=$(format_reset_time "$seven_day_reset" "datetime")
+            rate_lines+=" ${dim}⟳${reset} ${white}${seven_day_reset_str}${reset}"
         else
-            seven_day_remaining=$(format_remaining "$seven_day_reset_iso" "7d")
+            seven_day_remaining=$(format_remaining "$seven_day_reset")
             [ -n "$seven_day_remaining" ] && rate_lines+=" ${dim}(${seven_day_remaining})${reset}"
-        fi
-
-        if [ "$extra_enabled" = "true" ]; then
-            extra_pct=$(echo "$usage_data" | jq -r '.extra_usage.utilization // 0' | awk '{printf "%.0f", $1}')
-            extra_used=$(echo "$usage_data" | jq -r '.extra_usage.used_credits // 0' | awk '{printf "%.2f", $1/100}')
-            extra_limit=$(echo "$usage_data" | jq -r '.extra_usage.monthly_limit // 0' | awk '{printf "%.2f", $1/100}')
-            extra_bar=$(build_bar "$extra_pct" "$bar_width")
-            extra_pct_color=$(color_for_pct "$extra_pct")
-
-            extra_col="${white}extra${reset}   ${extra_bar} ${extra_pct_color}\$${extra_used}${dim}/${reset}${white}\$${extra_limit}${reset}"
-            rate_lines+="\n${extra_col}"
         fi
     fi
 fi
