@@ -292,6 +292,8 @@ seven_day_pct=$(echo "$input" | jq -r '.rate_limits.seven_day.used_percentage //
 seven_day_reset=$(echo "$input" | jq -r '.rate_limits.seven_day.resets_at // empty')
 
 if [ -n "$five_hour_pct" ] && [ -n "$seven_day_pct" ]; then
+    five_hour_pct=$(printf "%.0f" "$five_hour_pct")
+    seven_day_pct=$(printf "%.0f" "$seven_day_pct")
     five_hour_pct_color=$(color_for_pct "$five_hour_pct")
     seven_day_pct_color=$(color_for_pct "$seven_day_pct" "cool")
 
