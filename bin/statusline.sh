@@ -210,6 +210,7 @@ fi
 
 effort=""
 transcript_path=$(echo "$input" | jq -r '.transcript_path // empty' 2>/dev/null)
+transcript_path="${transcript_path//\\//}"
 if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
     effort=$(tail -200 "$transcript_path" 2>/dev/null \
         | sed 's/\\u001b\[[0-9;]*m//g; s/\\\\//g' \
@@ -231,6 +232,7 @@ fi
 pct_color=$(color_for_pct "$pct_used" "amber")
 cwd=$(echo "$input" | jq -r '.cwd // ""')
 [ -z "$cwd" ] || [ "$cwd" = "null" ] && cwd=$(pwd)
+cwd="${cwd//\\//}"
 dirname=$(basename "$cwd")
 
 git_branch=""
