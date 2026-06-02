@@ -214,9 +214,9 @@ transcript_path="${transcript_path//\\//}"
 if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
     effort=$(tail -200 "$transcript_path" 2>/dev/null \
         | sed 's/\\u001b\[[0-9;]*m//g; s/\\\\//g' \
-        | grep -oE 'local-command-stdout>(Set effort level to (low|medium|xhigh|high|max)|Set model to [^<]*(low|medium|xhigh|high|max) effort)' \
+        | grep -oE 'local-command-stdout>(Set effort level to (low|medium|xhigh|high|max|ultracode)|Set model to [^<]*(low|medium|xhigh|high|max|ultracode) effort)' \
         | tail -1 \
-        | grep -oE '(low|medium|xhigh|high|max)' \
+        | grep -oE '(low|medium|xhigh|high|max|ultracode)' \
         | tail -1)
 fi
 if [ -z "$effort" ]; then
@@ -275,7 +275,8 @@ if [ -n "$session_duration" ]; then
 fi
 line1+="${sep}"
 case "$effort" in
-    max)    line1+="${yellow}✦ ${effort}${reset}" ;;
+    ultracode) line1+="${teal}✪ ${effort}${reset}" ;;
+    max)    line1+="${yellow}★ ${effort}${reset}" ;;
     xhigh)  line1+="${pink}◉ ${effort}${reset}" ;;
     high)   line1+="${magenta}● ${effort}${reset}" ;;
     medium) line1+="${sapphire}◑ ${effort}${reset}" ;;

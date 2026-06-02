@@ -33,7 +33,7 @@ Two files do all the work:
 1. Claude Code pipes JSON context to `statusline.sh` via stdin (includes `rate_limits.{five_hour,seven_day}.{used_percentage,resets_at}`)
 2. Script extracts model name, context usage, cwd, session start time, rate limits
 3. Git branch/dirty state detected if in a repo
-4. Effort level detected from session transcript JSONL (supports max/xhigh/high/medium/low), fallback to settings.json
+4. Effort level detected from session transcript JSONL (supports ultracode/max/xhigh/high/medium/low), fallback to settings.json
 5. Formatted output with Catppuccin Mocha ANSI colors rendered to stdout
 
 ### Status Line Output

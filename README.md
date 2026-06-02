@@ -64,11 +64,12 @@ Usage ▓▓▓▓░░░░░░░░ 44% (1h·4m left) │ ▓▓░░░
 
 ## Effort Level Detection
 
-Effort level is detected from the session transcript (supports `max`, `xhigh`, `high`, `medium`, `low`), with fallback to `~/.claude/settings.json`. Each level has a distinct icon and color:
+Effort level is detected from the session transcript (supports `ultracode`, `max`, `xhigh`, `high`, `medium`, `low`), with fallback to `~/.claude/settings.json`. Each level has a distinct icon and color:
 
 | Level | Icon | Color |
 |-------|------|-------|
-| max | ✦ | Yellow |
+| ultracode | ✪ | Teal |
+| max | ★ | Yellow |
 | xhigh | ◉ | Pink |
 | high | ● | Mauve |
 | medium | ◑ | Sapphire |
