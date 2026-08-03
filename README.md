@@ -35,6 +35,9 @@ brew install jq
 | `--bar-style` | `diamond`, `block`, `dot`, `arrow`, `square`, `shade` | `diamond` | Progress bar character style |
 | `--usage-style` | `default`, `compact` | `default` | Multi-line or single-line usage |
 | `--time-style` | `remaining`, `absolute` | `remaining` | `1h·4m left` vs `12:00am` |
+| `--minimal` | flag | off | Model, context % and effort only |
+
+Each has an environment variable equivalent (`CLAUDE_STATUSLINE_BAR_STYLE`, `CLAUDE_STATUSLINE_USAGE_STYLE`, `CLAUDE_STATUSLINE_TIME_STYLE`, `CLAUDE_STATUSLINE_MINIMAL`); CLI arguments win.
 
 ### Bar Styles
 
@@ -51,29 +54,36 @@ brew install jq
 
 **default** — multi-line with rate limit details:
 ```
-Opus 4.6 (1M context) │ ✍️ 12% │ my-project (main) │ ⏱ 1h30m │ ✦ max
+Opus 4.6 (1M context) │ ✍️ 12% │ my-project (main) │ ⏱ 1h30m │ max
 current ▓▓▓▓░░░░░░  44% (1h·4m left)
 weekly  ▓▓░░░░░░░░  21% (2d·14h left)
 ```
 
 **compact** — single-line usage:
 ```
-Opus 4.6 (1M context) │ ✍️ 12% │ my-project (main) │ ⏱ 1h30m │ ✦ max
+Opus 4.6 (1M context) │ ✍️ 12% │ my-project (main) │ ⏱ 1h30m │ max
 Usage ▓▓▓▓░░░░░░░░ 44% (1h·4m left) │ ▓▓░░░░░░░░░░ 21% (2d·14h left)
 ```
 
+**`--minimal`** — one line, no rate limits:
+```
+Opus 4.6 (1M context) │ ✍️ 12% │ max
+```
+
+Minimal mode exits before touching cwd, git or rate limits, so it also skips the `git status` call that dominates the render time in a large repo.
+
 ## Effort Level Detection
 
-Effort level is detected from the session transcript (supports `ultracode`, `max`, `xhigh`, `high`, `medium`, `low`), with fallback to `~/.claude/settings.json`. Each level has a distinct icon and color:
+Effort level is read from the session transcript (supports `ultracode`, `max`, `xhigh`, `high`, `medium`, `low`), with fallback to `~/.claude/settings.json`. It uses the `effort` field Claude Code writes on each assistant turn, so it stays accurate for the whole session; `ultracode` is picked up separately from `/effort` output since it reports as `xhigh`. The level is rendered as plain text, colored by tier:
 
-| Level | Icon | Color |
-|-------|------|-------|
-| ultracode | ✪ | Teal |
-| max | ★ | Yellow |
-| xhigh | ◉ | Pink |
-| high | ● | Mauve |
-| medium | ◑ | Sapphire |
-| low | ◔ | Dim |
+| Level | Color |
+|-------|-------|
+| ultracode | Teal |
+| max | Yellow |
+| xhigh | Pink |
+| high | Mauve |
+| medium | Sapphire |
+| low | Dim |
 
 ## Color Scheme
 

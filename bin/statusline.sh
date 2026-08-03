@@ -5,15 +5,18 @@ set -f
 BAR_STYLE=""
 USAGE_STYLE=""
 TIME_STYLE=""
+MINIMAL=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --bar-style) BAR_STYLE="$2"; shift 2 ;;
         --usage-style) USAGE_STYLE="$2"; shift 2 ;;
         --time-style) TIME_STYLE="$2"; shift 2 ;;
-        --cache-ttl) shift 2 ;;
+        --minimal) MINIMAL=1; shift ;;
         *) shift ;;
     esac
 done
+
+minimal="${MINIMAL:-${CLAUDE_STATUSLINE_MINIMAL:-}}"
 
 input=$(cat)
 
@@ -212,12 +215,22 @@ effort=""
 transcript_path=$(echo "$input" | jq -r '.transcript_path // empty' 2>/dev/null)
 transcript_path="${transcript_path//\\//}"
 if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
+    # Ground truth: Claude Code stamps `effort` on every assistant record
     effort=$(tail -200 "$transcript_path" 2>/dev/null \
-        | sed 's/\\u001b\[[0-9;]*m//g; s/\\\\//g' \
-        | grep -oE 'local-command-stdout>(Set effort level to (low|medium|xhigh|high|max|ultracode)|Set model to [^<]*(low|medium|xhigh|high|max|ultracode) effort)' \
-        | tail -1 \
-        | grep -oE '(low|medium|xhigh|high|max|ultracode)' \
-        | tail -1)
+        | jq -rn 'inputs | .effort // empty' 2>/dev/null | tail -1)
+
+    # ultracode is "xhigh + orchestration", so the effort field still reports xhigh —
+    # it only surfaces in /effort output. grep narrows the file, jq confirms the line
+    # really is command output so the same text quoted in a tool result can't spoof it.
+    if [ "$effort" = "xhigh" ] || [ -z "$effort" ]; then
+        last_set=$(grep -F 'local-command-stdout>Set effort level to ' "$transcript_path" 2>/dev/null \
+            | jq -rn 'inputs
+                | select((.message.content? | type) == "string")
+                | .message.content
+                | select(startswith("<local-command-stdout>Set effort level to "))
+                | capture("Set effort level to (?<e>[a-z]+)").e' 2>/dev/null | tail -1)
+        [ "$last_set" = "ultracode" ] && effort="ultracode"
+    fi
 fi
 if [ -z "$effort" ]; then
     settings_path="$HOME/.claude/settings.json"
@@ -226,6 +239,25 @@ if [ -z "$effort" ]; then
     else
         effort="default"
     fi
+fi
+
+effort_badge() {
+    case "$effort" in
+        ultracode) printf "${teal}${effort}${reset}" ;;
+        max)       printf "${yellow}${effort}${reset}" ;;
+        xhigh)     printf "${pink}${effort}${reset}" ;;
+        high)      printf "${magenta}${effort}${reset}" ;;
+        medium)    printf "${sapphire}${effort}${reset}" ;;
+        low)       printf "${dim}${effort}${reset}" ;;
+        *)         printf "${dim}${effort}${reset}" ;;
+    esac
+}
+
+# ── Minimal mode: model │ context % │ effort, nothing else ──
+if [ -n "$minimal" ]; then
+    pct_color=$(color_for_pct "$pct_used" "amber")
+    printf "%b" "${orange}${model_name}${reset}${sep}✍️ ${pct_color}${pct_used}%${reset}${sep}$(effort_badge)"
+    exit 0
 fi
 
 # ── LINE 1: Model │ Context % │ Directory (branch) │ Session │ Thinking ──
@@ -274,15 +306,7 @@ if [ -n "$session_duration" ]; then
     line1+="${dim}⏱ ${reset}${white}${session_duration}${reset}"
 fi
 line1+="${sep}"
-case "$effort" in
-    ultracode) line1+="${teal}✪ ${effort}${reset}" ;;
-    max)    line1+="${yellow}★ ${effort}${reset}" ;;
-    xhigh)  line1+="${pink}◉ ${effort}${reset}" ;;
-    high)   line1+="${magenta}● ${effort}${reset}" ;;
-    medium) line1+="${sapphire}◑ ${effort}${reset}" ;;
-    low)    line1+="${dim}◔ ${effort}${reset}" ;;
-    *)      line1+="${dim}○ ${effort}${reset}" ;;
-esac
+line1+="$(effort_badge)"
 
 # ── Rate limit lines (from stdin, no API call) ──────────
 usage_style="${USAGE_STYLE:-${CLAUDE_STATUSLINE_USAGE_STYLE:-default}}"
