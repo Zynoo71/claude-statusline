@@ -211,13 +211,18 @@ else
     pct_used=0
 fi
 
-effort=""
+# Live session effort: Claude Code >= 2.1.263 puts the effective level on stdin
+# and it changes the moment /effort runs. Older versions fall back to the
+# transcript, which only catches up once the next assistant record is written.
+effort=$(echo "$input" | jq -r '.effort.level // empty' 2>/dev/null)
 transcript_path=$(echo "$input" | jq -r '.transcript_path // empty' 2>/dev/null)
 transcript_path="${transcript_path//\\//}"
 if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
-    # Ground truth: Claude Code stamps `effort` on every assistant record
-    effort=$(tail -200 "$transcript_path" 2>/dev/null \
-        | jq -rn 'inputs | .effort // empty' 2>/dev/null | tail -1)
+    # Fallback: Claude Code stamps `effort` on every assistant record
+    if [ -z "$effort" ]; then
+        effort=$(tail -200 "$transcript_path" 2>/dev/null \
+            | jq -rn 'inputs | .effort // empty' 2>/dev/null | tail -1)
+    fi
 
     # ultracode is "xhigh + orchestration", so the effort field still reports xhigh —
     # it only surfaces in /effort output. grep narrows the file, jq confirms the line

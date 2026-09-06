@@ -74,7 +74,7 @@ Minimal mode exits before touching cwd, git or rate limits, so it also skips the
 
 ## Effort Level Detection
 
-Effort level is read from the session transcript (supports `ultracode`, `max`, `xhigh`, `high`, `medium`, `low`), with fallback to `~/.claude/settings.json`. It uses the `effort` field Claude Code writes on each assistant turn, so it stays accurate for the whole session; `ultracode` is picked up separately from `/effort` output since it reports as `xhigh`. The level is rendered as plain text, colored by tier:
+Effort level comes from the `effort.level` field Claude Code (2.1.263+) passes on stdin, which updates the moment `/effort` runs. Older versions fall back to the `effort` field Claude Code writes on each assistant turn in the session transcript, then to `~/.claude/settings.json`. Supports `ultracode`, `max`, `xhigh`, `high`, `medium`, `low`; `ultracode` is picked up separately from `/effort` output since it reports as `xhigh`. The level is rendered as plain text, colored by tier:
 
 | Level | Color |
 |-------|-------|

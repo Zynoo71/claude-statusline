@@ -33,15 +33,16 @@ Two files do all the work:
 1. Claude Code pipes JSON context to `statusline.sh` via stdin (includes `rate_limits.{five_hour,seven_day}.{used_percentage,resets_at}`)
 2. Script extracts model name, context usage, cwd, session start time, rate limits
 3. Git branch/dirty state detected if in a repo
-4. Effort level read from the transcript JSONL (see below), fallback to settings.json
+4. Effort level read from stdin `effort.level` (see below), fallback to the transcript JSONL, then settings.json
 5. Formatted output with Catppuccin Mocha ANSI colors rendered to stdout
 
 ### Effort Detection
 
-Two signals, both parsed with jq so the same strings quoted inside tool output can't spoof them:
+Three sources, all parsed with jq so the same strings quoted inside tool output can't spoof them:
 
-1. **`.effort` on assistant records** (`low`/`medium`/`high`/`xhigh`/`max`) — Claude Code stamps this on every assistant turn, so the last 200 lines always carry the current value.
-2. **`/effort` command output** — `ultracode` never appears in `.effort` (it is xhigh + orchestration, so the field reports `xhigh`). Only checked when the level is `xhigh`/empty: a `grep -F` narrows the whole file to candidate lines, then jq confirms the record really is command output. Full-file scan because the marker is usually set once at session start and scrolls out of any tail window.
+1. **`.effort.level` on stdin** (`low`/`medium`/`high`/`xhigh`/`max`) — Claude Code >= 2.1.263 passes the live session value, so it changes the moment `/effort` runs.
+2. **`.effort` on assistant records** — fallback for older versions. Claude Code stamps this on every assistant turn, so the last 200 lines carry the current value, but it only catches up after the next assistant reply.
+3. **`/effort` command output** — `ultracode` never appears in `.effort` (it is xhigh + orchestration, so the field reports `xhigh`). Only checked when the level is `xhigh`/empty: a `grep -F` narrows the whole file to candidate lines, then jq confirms the record really is command output. Full-file scan because the marker is usually set once at session start and scrolls out of any tail window.
 
 ### Status Line Output
 
